@@ -121,7 +121,15 @@ export const deleteServiceCategory = async (categoryToDelete: string, newCategor
 
 export const getServiceCategories = async (userId: string): Promise<string[]> => {
   if (useSupabase) {
-    return await getSupabaseServiceCategories(userId);
+    // Force fresh data fetch from Supabase
+    try {
+      const categories = await getSupabaseServiceCategories(userId);
+      console.log('Fetched categories from Supabase:', categories);
+      return categories;
+    } catch (error) {
+      console.error('Error fetching categories from Supabase:', error);
+      return ['Ерөнхий'];
+    }
   } else {
     return getLocalServiceCategories(userId);
   }

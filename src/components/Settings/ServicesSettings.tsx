@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, Save, X, ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { mn } from '../../utils/mongolian';
 import { Service } from '../../types';
 import { getServices, saveService, deleteService, updateServiceCategory, deleteServiceCategory, getServiceCategories } from '../../utils/storage';
+import { supabase, isSupabaseConfigured } from '../../utils/supabaseClient';
 
 const ServicesSettings: React.FC = () => {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ const ServicesSettings: React.FC = () => {
   const [showCategoryDelete, setShowCategoryDelete] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [newCategoryForServices, setNewCategoryForServices] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -23,20 +25,48 @@ const ServicesSettings: React.FC = () => {
     category: ''
   });
 
+  // Create a memoized loadServices function that we can use in useEffect and event listeners
+  const loadServices = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Get services
+      const userServices = await getServices(user.id);
+      setServices(userServices);
+      
+      // Get categories
+      const serviceCategories = await getServiceCategories(user.id);
+      setCategories(serviceCategories);
+      
+      // Auto-expand all categories initially
+      const categorySet = new Set(serviceCategories);
+      setExpandedCategories(categorySet);
+      
+      console.log('Services and categories loaded successfully');
+    } catch (error) {
+      console.error('Error loading services and categories:', error);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
     loadServices();
-  }, [user]);
-
-  const loadServices = async () => {
-    if (!user) return;
-    const userServices = await getServices(user.id);
-    setServices(userServices);
     
-    // Auto-expand all categories initially
-    const categories = new Set(userServices.map(s => s.category || 'Ерөнхий'));
-    setExpandedCategories(categories);
-  };
+    // Set up realtime subscription if Supabase is configured
+    if (isSupabaseConfigured && user) {
+      // Listen for the custom event we dispatch when realtime updates occur
+      const handleRealtimeUpdate = () => {
+        console.log('Realtime update detected, refreshing services and categories');
+        loadServices();
+      };
+      
+      window.addEventListener('supabase-services-update', handleRealtimeUpdate);
+      
+      return () => {
+        window.removeEventListener('supabase-services-update', handleRealtimeUpdate);
+      };
+    }
+  }, [user, loadServices]);
 
   const resetForm = () => {
     setFormData({ name: '', price: '', commissionRate: '', category: '' });
@@ -323,9 +353,8 @@ const ServicesSettings: React.FC = () => {
                   >
                     <option value="">Ангилал сонгох...</option>
                     <option value="Ерөнхий">Ерөнхий</option>
-                    {Array.from(new Set(services.map(s => s.category || 'Ерөнхий')))
+                    {categories
                       .filter(category => category !== 'Ерөнхий')
-                      .sort()
                       .map(category => (
                         <option key={category} value={category}>
                           {category}

@@ -5,8 +5,8 @@ import { Database } from '../types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-console.log('VITE_SUPABASE_URL from import.meta.env:', supabaseUrl);
-console.log('VITE_SUPABASE_ANON_KEY from import.meta.env:', supabaseAnonKey);
+console.log('Supabase URL configured:', !!supabaseUrl);
+console.log('Supabase Anon Key configured:', !!supabaseAnonKey);
 
 // Check if environment variables are properly configured
 const isPlaceholder = !supabaseUrl || !supabaseAnonKey || 
@@ -31,9 +31,40 @@ export const supabase = createClient<Database>(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
     }
   }
 );
 
 // Export a flag to check if Supabase is properly configured
 export const isSupabaseConfigured = !isPlaceholder;
+
+// Initialize realtime subscriptions
+export const initializeRealtimeSubscriptions = (userId: string) => {
+  if (!isSupabaseConfigured) return null;
+  
+  // Subscribe to services table changes (which includes categories)
+  const subscription = supabase
+    .channel('services-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'services',
+        filter: `user_id=eq.${userId}`
+      },
+      (payload) => {
+        console.log('Realtime update received:', payload);
+        // Dispatch a custom event that components can listen for
+        window.dispatchEvent(new CustomEvent('supabase-services-update', { detail: payload }));
+      }
+    )
+    .subscribe();
+    
+  return subscription;
+};

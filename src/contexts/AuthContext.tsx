@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../utils/supabaseClient';
+import { supabase, initializeRealtimeSubscriptions } from '../utils/supabaseClient';
 import { isSupabaseConfigured } from '../utils/supabaseClient';
 
 interface AuthContextType {
@@ -29,11 +29,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [realtimeSubscription, setRealtimeSubscription] = useState<any>(null);
 
   const clearAuthData = () => {
     console.log('Clearing auth data');
     setUser(null);
     setSession(null);
+    
+    // Clean up realtime subscription if it exists
+    if (realtimeSubscription) {
+      realtimeSubscription.unsubscribe();
+      setRealtimeSubscription(null);
+    }
+    
     // Clear any stored auth data
     localStorage.removeItem('supabase.auth.token');
     sessionStorage.removeItem('supabase.auth.token');
@@ -91,6 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else if (event === 'SIGNED_IN') {
             setSession(session);
             setUser(session?.user ?? null);
+            
+            // Initialize realtime subscriptions when user signs in
+            if (session?.user && isSupabaseConfigured) {
+              const subscription = initializeRealtimeSubscriptions(session.user.id);
+              setRealtimeSubscription(subscription);
+            }
           } else if (event === 'USER_UPDATED') {
             setUser(session?.user ?? null);
           }
@@ -123,6 +137,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
+      // Clean up realtime subscription on unmount
+      if (realtimeSubscription) {
+        realtimeSubscription.unsubscribe();
+      }
+      
       if (subscription) {
         subscription.unsubscribe();
       }

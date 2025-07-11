@@ -206,14 +206,28 @@ export const getServiceCategories = async (userId: string): Promise<string[]> =>
     const { data, error } = await supabase
       .from('services')
       .select('category')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .order('category');
     
     if (error) {
       console.error('Error getting service categories:', error);
       return ['Ерөнхий'];
     }
     
-    const categories = new Set(data.map(s => s.category || 'Ерөнхий'));
+    // Use a Set to ensure unique categories
+    const categories = new Set<string>();
+    
+    // Always include 'Ерөнхий' as the default category
+    categories.add('Ерөнхий');
+    
+    // Add all non-null categories from the data
+    data.forEach(item => {
+      if (item.category) {
+        categories.add(item.category);
+      }
+    });
+    
+    // Convert to array and sort
     return Array.from(categories).sort((a, b) => {
       if (a === 'Ерөнхий') return -1;
       if (b === 'Ерөнхий') return 1;
