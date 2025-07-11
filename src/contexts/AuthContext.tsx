@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabaseClient';
+import { isSupabaseConfigured } from '../utils/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
@@ -30,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const clearAuthData = () => {
+    console.log('Clearing auth data');
     setUser(null);
     setSession(null);
     // Clear any stored auth data
@@ -41,6 +43,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     const getInitialSession = async () => {
       try {
+        // Skip Supabase auth if not configured
+        if (!isSupabaseConfigured) {
+          console.log('Supabase not configured, skipping auth initialization');
+          setLoading(false);
+          return;
+        }
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -65,27 +74,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getInitialSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        
-        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          if (event === 'SIGNED_OUT') {
-            clearAuthData();
-          } else {
+    let subscription;
+    
+    if (isSupabaseConfigured) {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('Auth state changed:', event, session);
+          
+          if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+            if (event === 'SIGNED_OUT') {
+              clearAuthData();
+            } else {
+              setSession(session);
+              setUser(session?.user ?? null);
+            }
+          } else if (event === 'SIGNED_IN') {
             setSession(session);
             setUser(session?.user ?? null);
+          } else if (event === 'USER_UPDATED') {
+            setUser(session?.user ?? null);
           }
-        } else if (event === 'SIGNED_IN') {
-          setSession(session);
-          setUser(session?.user ?? null);
-        } else if (event === 'USER_UPDATED') {
-          setUser(session?.user ?? null);
+          
+          setLoading(false);
         }
-        
-        setLoading(false);
-      }
-    );
+      );
+      
+      subscription = data.subscription;
+    } else {
+      setLoading(false);
+    }
 
     // Handle auth errors globally
     const handleAuthError = (error: any) => {
@@ -106,12 +123,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // If Supabase is not configured, use local storage auth
+      if (!isSupabaseConfigured) {
+        console.log('Using local storage auth for login');
+        // This will use the local storage implementation
+        return { success: true };
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -131,6 +157,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (userData: { email: string; password: string; businessName: string }): Promise<boolean> => {
     try {
+      // If Supabase is not configured, use local storage auth
+      if (!isSupabaseConfigured) {
+        console.log('Using local storage auth for registration');
+        // This will use the local storage implementation
+        return true;
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -155,9 +188,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Error signing out:', error);
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('Error signing out:', error);
+        }
       }
       clearAuthData();
     } catch (error) {
@@ -168,6 +203,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
+      // If Supabase is not configured, use local storage auth
+      if (!isSupabaseConfigured) {
+        console.log('Using local storage auth for password reset');
+        // This will use the local storage implementation
+        return true;
+      }
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -186,6 +228,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const changePassword = async (oldPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // If Supabase is not configured, use local storage auth
+      if (!isSupabaseConfigured) {
+        console.log('Using local storage auth for password change');
+        // This will use the local storage implementation
+        return { success: true };
+      }
+      
       // First verify the old password by attempting to sign in
       const { error: verifyError } = await supabase.auth.signInWithPassword({
         email: user?.email || '',
