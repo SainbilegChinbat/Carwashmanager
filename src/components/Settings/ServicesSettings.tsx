@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { mn } from '../../utils/mongolian';
 import { Service } from '../../types';
 import { getServices, saveService, deleteService, updateServiceCategory, deleteServiceCategory, getServiceCategories } from '../../utils/storage';
+import { isSupabaseConfigured } from '../../utils/supabaseClient';
 
 const ServicesSettings: React.FC = () => {
   const { user } = useAuth();
@@ -25,8 +26,8 @@ const ServicesSettings: React.FC = () => {
   });
   const [forceRefreshCounter, setForceRefreshCounter] = useState(0);
 
-  // Function to load services and categories
-  const loadData = useCallback(async () => {
+  // Create a memoized loadServices function that we can use in useEffect and event listeners
+  const loadServices = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -49,41 +50,49 @@ const ServicesSettings: React.FC = () => {
       console.error('Error loading services and categories:', error);
     }
   }, [user, forceRefreshCounter]);
-  
+
   useEffect(() => {
     if (!user) return;
-    loadData();
+    loadServices();
     
-    // Listen for data refresh events
-    const handleDataRefresh = (event: Event) => {
-      console.log('Data refresh event received');
-      const { services: newServices, categories: newCategories } = (event as CustomEvent).detail || {};
+    // Set up realtime subscription if Supabase is configured
+    if (isSupabaseConfigured && user) {
+      const handleServicesUpdate = (event: Event) => {
+        console.log('Services update event received:', (event as CustomEvent).detail);
+        loadServices();
+      };
       
-      if (newServices) {
-        console.log('Setting new services:', newServices.length);
-        setServices(newServices);
-      }
+      const handleCategoriesUpdate = (event: Event) => {
+        console.log('Categories update event received:', (event as CustomEvent).detail);
+        const { categories: newCategories } = (event as CustomEvent).detail;
+        if (newCategories && Array.isArray(newCategories)) {
+          console.log('Setting new categories:', newCategories);
+          setCategories(newCategories);
+          
+          // Update expanded categories
+          const categorySet = new Set(newCategories);
+          setExpandedCategories(categorySet);
+        }
+      };
       
-      if (newCategories) {
-        console.log('Setting new categories:', newCategories);
-        setCategories(newCategories);
-        
-        // Update expanded categories
-        const categorySet = new Set(newCategories);
-        setExpandedCategories(categorySet);
-      }
-    };
-    
-    window.addEventListener('data-refreshed', handleDataRefresh);
-    
-    // Force initial data load
-    setForceRefreshCounter(c => c + 1);
-    
-    return () => {
-      window.removeEventListener('data-refreshed', handleDataRefresh);
-    };
-  }, [user, loadData]);
+      window.addEventListener('supabase-services-update', handleServicesUpdate);
+      window.addEventListener('categories-updated', handleCategoriesUpdate);
+      
+      return () => {
+        window.removeEventListener('supabase-services-update', handleServicesUpdate);
+        window.removeEventListener('categories-updated', handleCategoriesUpdate);
+      };
+    }
+  }, [user, loadServices, forceRefreshCounter]);
   
+  // Force refresh when component mounts
+  useEffect(() => {
+    if (user && isSupabaseConfigured) {
+      console.log('Initial force refresh of services and categories');
+      setForceRefreshCounter(c => c + 1);
+    }
+  }, [user]);
+
   const resetForm = () => {
     setFormData({ name: '', price: '', commissionRate: '', category: '' });
     setEditingService(null);
@@ -115,11 +124,21 @@ const ServicesSettings: React.FC = () => {
     };
 
     const success = await saveService(serviceData);
-    resetForm();
+    if (success) {
+      await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
+      resetForm();
+    }
   };
 
   const handleDelete = async (serviceId: string) => {
-    await deleteService(serviceId);
+    const success = await deleteService(serviceId);
+    if (success) {
+      await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
+    }
     setShowDeleteConfirm(null);
   };
 
@@ -146,9 +165,14 @@ const ServicesSettings: React.FC = () => {
       return;
     }
 
-    await updateServiceCategory(showCategoryEdit, editingCategoryName.trim(), user.id);
-    setShowCategoryEdit(null);
-    setEditingCategoryName('');
+    const success = await updateServiceCategory(showCategoryEdit, editingCategoryName.trim(), user.id);
+    if (success) {
+      await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
+      setShowCategoryEdit(null);
+      setEditingCategoryName('');
+    }
   };
 
   const handleCategoryDelete = (category: string) => {
@@ -163,9 +187,14 @@ const ServicesSettings: React.FC = () => {
   const handleCategoryDeleteConfirm = async () => {
     if (!user || !showCategoryDelete || !newCategoryForServices) return;
 
-    await deleteServiceCategory(showCategoryDelete, newCategoryForServices, user.id);
-    setShowCategoryDelete(null);
-    setNewCategoryForServices('');
+    const success = await deleteServiceCategory(showCategoryDelete, newCategoryForServices, user.id);
+    if (success) {
+      await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
+      setShowCategoryDelete(null);
+      setNewCategoryForServices('');
+    }
   };
 
   // Group services by category

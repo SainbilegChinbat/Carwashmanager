@@ -43,137 +43,41 @@ export const supabase = createClient<Database>(
 // Export a flag to check if Supabase is properly configured
 export const isSupabaseConfigured = !isPlaceholder;
 
-// Initialize realtime subscriptions for all tables
-export const initializeRealtimeSubscriptions = (userId: string) => {
+// Initialize realtime subscriptions
+export const initializeRealtimeSubscriptions = (userId: string, forceRefresh?: () => void) => {
   if (!isSupabaseConfigured) return null;
   
   try {
     console.log('Initializing realtime subscriptions for user:', userId);
     
-    // Create a single channel for all table changes
-    const channel = supabase.channel('db-changes');
+    // Subscribe to services table changes (which includes categories)
+    const subscription = supabase
+      .channel('services-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'services',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('Realtime update received for services:', payload);
+          // Dispatch a custom event that components can listen for
+          window.dispatchEvent(new CustomEvent('supabase-services-update', { detail: payload }));
+          
+          // Force refresh if callback provided
+          if (forceRefresh) {
+            console.log('Forcing refresh of services data');
+            forceRefresh();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
     
-    // Subscribe to services table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-        schema: 'public',
-        table: 'services',
-        filter: `user_id=eq.${userId}`
-      },
-      (payload) => {
-        console.log('Realtime update received for services:', payload);
-        window.dispatchEvent(new CustomEvent('supabase-services-update', { detail: payload }));
-      }
-    );
-    
-    // Subscribe to employees table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'employees',
-        filter: `user_id=eq.${userId}`
-      },
-      (payload) => {
-        console.log('Realtime update received for employees:', payload);
-        window.dispatchEvent(new CustomEvent('supabase-employees-update', { detail: payload }));
-      }
-    );
-    
-    // Subscribe to transactions table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'transactions',
-        filter: `user_id=eq.${userId}`
-      },
-      (payload) => {
-        console.log('Realtime update received for transactions:', payload);
-        window.dispatchEvent(new CustomEvent('supabase-transactions-update', { detail: payload }));
-      }
-    );
-    
-    // Subscribe to pending_services table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'pending_services',
-        filter: `user_id=eq.${userId}`
-      },
-      (payload) => {
-        console.log('Realtime update received for pending services:', payload);
-        window.dispatchEvent(new CustomEvent('supabase-pending-services-update', { detail: payload }));
-      }
-    );
-    
-    // Subscribe to appointments table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'appointments',
-        filter: `user_id=eq.${userId}`
-      },
-      (payload) => {
-        console.log('Realtime update received for appointments:', payload);
-        window.dispatchEvent(new CustomEvent('supabase-appointments-update', { detail: payload }));
-      }
-    );
-    
-    // Subscribe to appointment_reminders table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'appointment_reminders',
-        filter: `user_id=eq.${userId}`
-      },
-      (payload) => {
-        console.log('Realtime update received for appointment reminders:', payload);
-        window.dispatchEvent(new CustomEvent('supabase-reminders-update', { detail: payload }));
-      }
-    );
-    
-    // Subscribe to commissions table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'commissions',
-      },
-      (payload) => {
-        console.log('Realtime update received for commissions:', payload);
-        window.dispatchEvent(new CustomEvent('supabase-commissions-update', { detail: payload }));
-      }
-    );
-    
-    // Subscribe the channel
-    channel.subscribe((status) => {
-      console.log('Realtime subscription status:', status);
-      
-      if (status === 'SUBSCRIBED') {
-        console.log('Successfully subscribed to all tables!');
-        window.dispatchEvent(new CustomEvent('supabase-realtime-connected'));
-      } else if (status === 'CHANNEL_ERROR') {
-        console.error('Error connecting to realtime channel');
-        window.dispatchEvent(new CustomEvent('supabase-realtime-error'));
-      } else if (status === 'TIMED_OUT') {
-        console.error('Realtime subscription timed out');
-        window.dispatchEvent(new CustomEvent('supabase-realtime-timeout'));
-      }
-    });
-    
-    return channel;
+    return subscription;
   } catch (error) {
     console.error('Error initializing realtime subscriptions:', error);
     return null;

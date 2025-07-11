@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { isSupabaseConfigured } from './utils/supabaseClient';
 import LoginForm from './components/Auth/LoginForm';
 import SignupForm from './components/Auth/SignupForm';
 import ForgotPasswordForm from './components/Auth/ForgotPasswordForm';
@@ -11,9 +10,6 @@ import ReportsView from './components/Reports/ReportsView';
 import AnalyticsView from './components/Analytics/AnalyticsView';
 import SettingsView from './components/Settings/SettingsView';
 import BottomNavigation from './components/Layout/BottomNavigation';
-
-// Log Supabase configuration status for debugging
-console.log('Is Supabase configured?', isSupabaseConfigured);
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();

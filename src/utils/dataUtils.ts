@@ -79,16 +79,8 @@ const useSupabase = isSupabaseConfigured === true;
 
 // Services
 export const getServices = async (userId: string): Promise<Service[]> => {
-  console.log('DataUtils: Getting services for user:', userId);
   if (useSupabase) {
-    try {
-      const services = await getSupabaseServices(userId);
-      console.log('DataUtils: Fetched services from Supabase:', services.length);
-      return services;
-    } catch (error) {
-      console.error('DataUtils: Error fetching services from Supabase:', error);
-      return [];
-    }
+    return await getSupabaseServices(userId);
   } else {
     return getLocalServices(userId);
   }
@@ -96,20 +88,7 @@ export const getServices = async (userId: string): Promise<Service[]> => {
 
 export const saveService = async (service: Service): Promise<boolean> => {
   if (useSupabase) {
-    try {
-      console.log('DataUtils: Saving service to Supabase:', service.name);
-      const result = await saveSupabaseService(service);
-      
-      if (result) {
-        // Force refresh data after saving
-        window.dispatchEvent(new CustomEvent('service-saved'));
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('DataUtils: Error saving service to Supabase:', error);
-      return false;
-    }
+    return await saveSupabaseService(service);
   } else {
     return saveLocalService(service);
   }
@@ -117,20 +96,7 @@ export const saveService = async (service: Service): Promise<boolean> => {
 
 export const deleteService = async (serviceId: string): Promise<boolean> => {
   if (useSupabase) {
-    try {
-      console.log('DataUtils: Deleting service from Supabase:', serviceId);
-      const result = await deleteSupabaseService(serviceId);
-      
-      if (result) {
-        // Force refresh data after deleting
-        window.dispatchEvent(new CustomEvent('service-deleted'));
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('DataUtils: Error deleting service from Supabase:', error);
-      return false;
-    }
+    return await deleteSupabaseService(serviceId);
   } else {
     return deleteLocalService(serviceId);
   }
@@ -139,20 +105,7 @@ export const deleteService = async (serviceId: string): Promise<boolean> => {
 // Category management
 export const updateServiceCategory = async (oldCategory: string, newCategory: string, userId: string): Promise<boolean> => {
   if (useSupabase) {
-    try {
-      console.log(`DataUtils: Updating category from "${oldCategory}" to "${newCategory}"`);
-      const result = await updateSupabaseServiceCategory(oldCategory, newCategory, userId);
-      
-      if (result) {
-        // Force refresh data after updating
-        window.dispatchEvent(new CustomEvent('category-updated'));
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('DataUtils: Error updating service category in Supabase:', error);
-      return false;
-    }
+    return await updateSupabaseServiceCategory(oldCategory, newCategory, userId);
   } else {
     return updateLocalServiceCategory(oldCategory, newCategory, userId);
   }
@@ -160,20 +113,7 @@ export const updateServiceCategory = async (oldCategory: string, newCategory: st
 
 export const deleteServiceCategory = async (categoryToDelete: string, newCategoryForServices: string, userId: string): Promise<boolean> => {
   if (useSupabase) {
-    try {
-      console.log(`DataUtils: Deleting category "${categoryToDelete}" and moving services to "${newCategoryForServices}"`);
-      const result = await deleteSupabaseServiceCategory(categoryToDelete, newCategoryForServices, userId);
-      
-      if (result) {
-        // Force refresh data after deleting
-        window.dispatchEvent(new CustomEvent('category-deleted'));
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('DataUtils: Error deleting service category in Supabase:', error);
-      return false;
-    }
+    return await deleteSupabaseServiceCategory(categoryToDelete, newCategoryForServices, userId);
   } else {
     return deleteLocalServiceCategory(categoryToDelete, newCategoryForServices, userId);
   }
@@ -181,16 +121,11 @@ export const deleteServiceCategory = async (categoryToDelete: string, newCategor
 
 export const getServiceCategories = async (userId: string): Promise<string[]> => {
   if (useSupabase) {
+    // Force fresh data fetch from Supabase
     try {
       console.log('DataUtils: Fetching fresh categories from Supabase for user:', userId);
       const categories = await getSupabaseServiceCategories(userId);
       console.log('DataUtils: Fetched categories from Supabase:', categories);
-      
-      // Dispatch an event with the categories
-      window.dispatchEvent(new CustomEvent('categories-fetched', { 
-        detail: { categories } 
-      }));
-      
       return categories;
     } catch (error) {
       console.error('DataUtils: Error fetching categories from Supabase:', error);
