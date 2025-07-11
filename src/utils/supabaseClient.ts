@@ -1,11 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
 console.log('VITE_SUPABASE_URL from import.meta.env:', supabaseUrl);
 console.log('VITE_SUPABASE_ANON_KEY from import.meta.env:', supabaseAnonKey);
 console.log('VITE_TEST_VARIABLE from import.meta.env:', import.meta.env.VITE_TEST_VARIABLE);
