@@ -44,42 +44,27 @@ export const supabase = createClient<Database>(
 export const isSupabaseConfigured = !isPlaceholder;
 
 // Initialize realtime subscriptions
-export const initializeRealtimeSubscriptions = (userId: string, forceRefresh?: () => void) => {
+export const initializeRealtimeSubscriptions = (userId: string) => {
   if (!isSupabaseConfigured) return null;
   
-  try {
-    console.log('Initializing realtime subscriptions for user:', userId);
+  // Subscribe to services table changes (which includes categories)
+  const subscription = supabase
+    .channel('services-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'services',
+        filter: `user_id=eq.${userId}`
+      },
+      (payload) => {
+        console.log('Realtime update received:', payload);
+        // Dispatch a custom event that components can listen for
+        window.dispatchEvent(new CustomEvent('supabase-services-update', { detail: payload }));
+      }
+    )
+    .subscribe();
     
-    // Subscribe to services table changes (which includes categories)
-    const subscription = supabase
-      .channel('services-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'services',
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-          console.log('Realtime update received for services:', payload);
-          // Dispatch a custom event that components can listen for
-          window.dispatchEvent(new CustomEvent('supabase-services-update', { detail: payload }));
-          
-          // Force refresh if callback provided
-          if (forceRefresh) {
-            console.log('Forcing refresh of services data');
-            forceRefresh();
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-      });
-    
-    return subscription;
-  } catch (error) {
-    console.error('Error initializing realtime subscriptions:', error);
-    return null;
-  }
+  return subscription;
 };
