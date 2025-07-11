@@ -11,9 +11,7 @@ import ReportsView from './components/Reports/ReportsView';
 import AnalyticsView from './components/Analytics/AnalyticsView';
 import SettingsView from './components/Settings/SettingsView';
 import BottomNavigation from './components/Layout/BottomNavigation';
-
-// Log Supabase configuration status for debugging
-console.log('Is Supabase configured?', isSupabaseConfigured);
+import { supabase } from './utils/supabaseClient';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -30,7 +28,12 @@ const AppContent: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-lg">Ачааллаж байна...</div>
+        <div className="text-white text-lg">
+          <div className="flex items-center">
+            <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin mr-3"></div>
+            Ачааллаж байна...
+          </div>
+        </div>
       </div>
     );
   }

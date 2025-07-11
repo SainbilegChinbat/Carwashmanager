@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [realtimeChannel, setRealtimeChannel] = useState<any>(null);
-  const [dataRefreshTrigger, setDataRefreshTrigger] = useState(0);
+  // Remove dataRefreshTrigger as it's causing issues
 
   // Function to force refresh all data
   const refreshAllData = async () => {
@@ -376,7 +376,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     session,
-    loading: loading || dataRefreshTrigger === 0, // Consider loading until first data refresh
+    loading, // Simplify loading state
     login,
     register,
     logout,
