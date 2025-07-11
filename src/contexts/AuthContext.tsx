@@ -210,12 +210,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (isSupabaseConfigured) {
         const { error } = await supabase.auth.signOut();
         if (error) {
-          console.error('Error signing out:', error);
+          // Check if the error is related to missing or invalid session
+          if (error.message?.includes('session_not_found') || 
+              error.message?.includes('Session from session_id claim in JWT does not exist') ||
+              error.message?.includes('Auth session missing')) {
+            console.warn('Session already invalidated on server:', error.message);
+          } else {
+            console.error('Error signing out:', error);
+          }
         }
       }
       clearAuthData();
     } catch (error) {
-      console.error('Unexpected error signing out:', error);
+      // Check if the caught error is also related to session issues
+      if (error?.message?.includes('session_not_found') || 
+          error?.message?.includes('Session from session_id claim in JWT does not exist') ||
+          error?.message?.includes('Auth session missing')) {
+        console.warn('Session already invalidated on server:', error.message);
+      } else {
+        console.error('Unexpected error signing out:', error);
+      }
       clearAuthData();
     }
   };
