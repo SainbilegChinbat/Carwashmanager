@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, initializeRealtimeSubscriptions } from '../utils/supabaseClient';
 import { isSupabaseConfigured } from '../utils/supabaseClient'; 
-import { getServiceCategories } from '../utils/dataUtils';
+import { getServices, getEmployees, getTransactions, getPendingServices, getAppointments, getActiveReminders, getServiceCategories } from '../utils/dataUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -30,23 +30,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [realtimeSubscription, setRealtimeSubscription] = useState<any>(null);
-  const [categoriesCache, setCategoriesCache] = useState<{[userId: string]: string[]}>({});
+  const [realtimeChannel, setRealtimeChannel] = useState<any>(null);
+  const [dataRefreshTrigger, setDataRefreshTrigger] = useState(0);
 
-  // Function to force refresh categories
-  const refreshCategories = async () => {
+  // Function to force refresh all data
+  const refreshAllData = async () => {
     if (user) {
-      console.log('Forcing refresh of categories for user:', user.id);
+      console.log('Forcing refresh of all data for user:', user.id);
       try {
-        const freshCategories = await getServiceCategories(user.id);
-        setCategoriesCache(prev => ({...prev, [user.id]: freshCategories}));
+        // Fetch all data types
+        const services = await getServices(user.id);
+        const employees = await getEmployees(user.id);
+        const transactions = await getTransactions(user.id);
+        const pendingServices = await getPendingServices(user.id);
+        const appointments = await getAppointments(user.id);
+        const reminders = await getActiveReminders(user.id);
+        const categories = await getServiceCategories(user.id);
         
-        // Dispatch a custom event that components can listen for
-        window.dispatchEvent(new CustomEvent('categories-updated', { 
-          detail: { categories: freshCategories } 
+        // Dispatch events for each data type
+        window.dispatchEvent(new CustomEvent('data-refreshed', { 
+          detail: { 
+            services,
+            employees,
+            transactions,
+            pendingServices,
+            appointments,
+            reminders,
+            categories,
+            timestamp: new Date().toISOString()
+          } 
         }));
+        
+        // Increment the refresh trigger to force component re-renders
+        setDataRefreshTrigger(prev => prev + 1);
+        
+        console.log('All data refreshed successfully');
       } catch (error) {
-        console.error('Error refreshing categories:', error);
+        console.error('Error refreshing data:', error);
       }
     }
   };
@@ -56,10 +76,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setSession(null);
     
-    // Clean up realtime subscription if it exists
-    if (realtimeSubscription) {
-      realtimeSubscription.unsubscribe();
-      setRealtimeSubscription(null);
+    // Clean up realtime channel if it exists
+    if (realtimeChannel) {
+      realtimeChannel.unsubscribe();
+      setRealtimeChannel(null);
     }
     
     // Clear any stored auth data
@@ -121,15 +141,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(session?.user ?? null);
             
             // Initialize realtime subscriptions when user signs in
-            if (session?.user && isSupabaseConfigured) {
-              const subscription = initializeRealtimeSubscriptions(
-                session.user.id, 
-                refreshCategories // Pass the refresh function
-              );
-              setRealtimeSubscription(subscription);
+            if (session?.user) {
+              if (isSupabaseConfigured) {
+                const channel = initializeRealtimeSubscriptions(session.user.id);
+                setRealtimeChannel(channel);
+                
+                // Set up event listeners for realtime updates
+                const handleRealtimeUpdate = () => {
+                  console.log('Realtime update received, refreshing all data');
+                  refreshAllData();
+                };
+                
+                window.addEventListener('supabase-services-update', handleRealtimeUpdate);
+                window.addEventListener('supabase-employees-update', handleRealtimeUpdate);
+                window.addEventListener('supabase-transactions-update', handleRealtimeUpdate);
+                window.addEventListener('supabase-pending-services-update', handleRealtimeUpdate);
+                window.addEventListener('supabase-appointments-update', handleRealtimeUpdate);
+                window.addEventListener('supabase-reminders-update', handleRealtimeUpdate);
+                window.addEventListener('supabase-commissions-update', handleRealtimeUpdate);
+              }
               
-              // Initial categories fetch
-              refreshCategories();
+              // Initial data fetch regardless of Supabase configuration
+              refreshAllData();
             }
           } else if (event === 'USER_UPDATED') {
             setUser(session?.user ?? null);
@@ -156,17 +189,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for unhandled auth errors
     window.addEventListener('unhandledrejection', (event) => {
       if (event.reason?.message?.includes('refresh_token_not_found') ||
-          event.reason?.message?.includes('Invalid Refresh Token')) {
+          event.reason?.message?.includes('Invalid Refresh Token') ||
+          event.reason?.message?.includes('session_not_found')) {
         handleAuthError(event.reason);
         event.preventDefault(); // Prevent the error from being logged to console
       }
     });
 
     return () => {
-      // Clean up realtime subscription on unmount
-      if (realtimeSubscription) {
-        realtimeSubscription.unsubscribe();
+      // Clean up realtime channel and event listeners on unmount
+      if (realtimeChannel) {
+        realtimeChannel.unsubscribe();
       }
+      
+      // Remove all event listeners
+      window.removeEventListener('supabase-services-update', refreshAllData);
+      window.removeEventListener('supabase-employees-update', refreshAllData);
+      window.removeEventListener('supabase-transactions-update', refreshAllData);
+      window.removeEventListener('supabase-pending-services-update', refreshAllData);
+      window.removeEventListener('supabase-appointments-update', refreshAllData);
+      window.removeEventListener('supabase-reminders-update', refreshAllData);
+      window.removeEventListener('supabase-commissions-update', refreshAllData);
       
       if (subscription) {
         subscription.unsubscribe();
@@ -333,7 +376,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     session,
-    loading,
+    loading: loading || dataRefreshTrigger === 0, // Consider loading until first data refresh
     login,
     register,
     logout,
