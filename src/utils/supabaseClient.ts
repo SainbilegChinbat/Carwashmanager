@@ -9,7 +9,6 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 console.log('VITE_SUPABASE_URL from import.meta.env:', supabaseUrl);
 console.log('VITE_SUPABASE_ANON_KEY from import.meta.env:', supabaseAnonKey);
 
-
 // Check if environment variables are properly configured
 const isPlaceholder = !supabaseUrl || !supabaseAnonKey || 
     supabaseUrl === 'your_supabase_project_url_here' || 
