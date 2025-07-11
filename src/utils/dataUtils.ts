@@ -123,14 +123,16 @@ export const getServiceCategories = async (userId: string): Promise<string[]> =>
   if (useSupabase) {
     // Force fresh data fetch from Supabase
     try {
+      console.log('DataUtils: Fetching fresh categories from Supabase for user:', userId);
       const categories = await getSupabaseServiceCategories(userId);
-      console.log('Fetched categories from Supabase:', categories);
+      console.log('DataUtils: Fetched categories from Supabase:', categories);
       return categories;
     } catch (error) {
-      console.error('Error fetching categories from Supabase:', error);
+      console.error('DataUtils: Error fetching categories from Supabase:', error);
       return ['Ерөнхий'];
     }
   } else {
+    console.log('DataUtils: Using local storage for categories');
     return getLocalServiceCategories(userId);
   }
 };

@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, initializeRealtimeSubscriptions } from '../utils/supabaseClient';
-import { isSupabaseConfigured } from '../utils/supabaseClient';
+import { isSupabaseConfigured } from '../utils/supabaseClient'; 
+import { getServiceCategories } from '../utils/dataUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -30,6 +31,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [realtimeSubscription, setRealtimeSubscription] = useState<any>(null);
+  const [categoriesCache, setCategoriesCache] = useState<{[userId: string]: string[]}>({});
+
+  // Function to force refresh categories
+  const refreshCategories = async () => {
+    if (user) {
+      console.log('Forcing refresh of categories for user:', user.id);
+      try {
+        const freshCategories = await getServiceCategories(user.id);
+        setCategoriesCache(prev => ({...prev, [user.id]: freshCategories}));
+        
+        // Dispatch a custom event that components can listen for
+        window.dispatchEvent(new CustomEvent('categories-updated', { 
+          detail: { categories: freshCategories } 
+        }));
+      } catch (error) {
+        console.error('Error refreshing categories:', error);
+      }
+    }
+  };
 
   const clearAuthData = () => {
     console.log('Clearing auth data');
@@ -102,8 +122,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Initialize realtime subscriptions when user signs in
             if (session?.user && isSupabaseConfigured) {
-              const subscription = initializeRealtimeSubscriptions(session.user.id);
+              const subscription = initializeRealtimeSubscriptions(
+                session.user.id, 
+                refreshCategories // Pass the refresh function
+              );
               setRealtimeSubscription(subscription);
+              
+              // Initial categories fetch
+              refreshCategories();
             }
           } else if (event === 'USER_UPDATED') {
             setUser(session?.user ?? null);

@@ -203,6 +203,7 @@ export const deleteServiceCategory = async (categoryToDelete: string, newCategor
 
 export const getServiceCategories = async (userId: string): Promise<string[]> => {
   try {
+    console.log('Fetching service categories from Supabase for user:', userId);
     const { data, error } = await supabase
       .from('services')
       .select('category')
@@ -213,6 +214,8 @@ export const getServiceCategories = async (userId: string): Promise<string[]> =>
       console.error('Error getting service categories:', error);
       return ['Ерөнхий'];
     }
+    
+    console.log('Raw category data from Supabase:', data);
     
     // Use a Set to ensure unique categories
     const categories = new Set<string>();
@@ -227,12 +230,16 @@ export const getServiceCategories = async (userId: string): Promise<string[]> =>
       }
     });
     
-    // Convert to array and sort
-    return Array.from(categories).sort((a, b) => {
+    const categoriesArray = Array.from(categories).sort((a, b) => {
       if (a === 'Ерөнхий') return -1;
       if (b === 'Ерөнхий') return 1;
       return a.localeCompare(b);
     });
+    
+    console.log('Processed categories array:', categoriesArray);
+    
+    // Convert to array and sort
+    return categoriesArray;
   } catch (error) {
     console.error('Exception getting service categories:', error);
     return ['Ерөнхий'];

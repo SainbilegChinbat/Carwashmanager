@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { mn } from '../../utils/mongolian';
 import { Service } from '../../types';
 import { getServices, saveService, deleteService, updateServiceCategory, deleteServiceCategory, getServiceCategories } from '../../utils/storage';
-import { supabase, isSupabaseConfigured } from '../../utils/supabaseClient';
+import { isSupabaseConfigured } from '../../utils/supabaseClient';
 
 const ServicesSettings: React.FC = () => {
   const { user } = useAuth();
@@ -24,18 +24,21 @@ const ServicesSettings: React.FC = () => {
     commissionRate: '',
     category: ''
   });
+  const [forceRefreshCounter, setForceRefreshCounter] = useState(0);
 
   // Create a memoized loadServices function that we can use in useEffect and event listeners
   const loadServices = useCallback(async () => {
     if (!user) return;
     
     try {
+      console.log('Loading services and categories...');
       // Get services
       const userServices = await getServices(user.id);
       setServices(userServices);
       
       // Get categories
       const serviceCategories = await getServiceCategories(user.id);
+      console.log('Fetched categories:', serviceCategories);
       setCategories(serviceCategories);
       
       // Auto-expand all categories initially
@@ -46,7 +49,7 @@ const ServicesSettings: React.FC = () => {
     } catch (error) {
       console.error('Error loading services and categories:', error);
     }
-  }, [user]);
+  }, [user, forceRefreshCounter]);
 
   useEffect(() => {
     if (!user) return;
@@ -54,19 +57,41 @@ const ServicesSettings: React.FC = () => {
     
     // Set up realtime subscription if Supabase is configured
     if (isSupabaseConfigured && user) {
-      // Listen for the custom event we dispatch when realtime updates occur
-      const handleRealtimeUpdate = () => {
-        console.log('Realtime update detected, refreshing services and categories');
+      const handleServicesUpdate = (event: Event) => {
+        console.log('Services update event received:', (event as CustomEvent).detail);
         loadServices();
       };
       
-      window.addEventListener('supabase-services-update', handleRealtimeUpdate);
+      const handleCategoriesUpdate = (event: Event) => {
+        console.log('Categories update event received:', (event as CustomEvent).detail);
+        const { categories: newCategories } = (event as CustomEvent).detail;
+        if (newCategories && Array.isArray(newCategories)) {
+          console.log('Setting new categories:', newCategories);
+          setCategories(newCategories);
+          
+          // Update expanded categories
+          const categorySet = new Set(newCategories);
+          setExpandedCategories(categorySet);
+        }
+      };
+      
+      window.addEventListener('supabase-services-update', handleServicesUpdate);
+      window.addEventListener('categories-updated', handleCategoriesUpdate);
       
       return () => {
-        window.removeEventListener('supabase-services-update', handleRealtimeUpdate);
+        window.removeEventListener('supabase-services-update', handleServicesUpdate);
+        window.removeEventListener('categories-updated', handleCategoriesUpdate);
       };
     }
-  }, [user, loadServices]);
+  }, [user, loadServices, forceRefreshCounter]);
+  
+  // Force refresh when component mounts
+  useEffect(() => {
+    if (user && isSupabaseConfigured) {
+      console.log('Initial force refresh of services and categories');
+      setForceRefreshCounter(c => c + 1);
+    }
+  }, [user]);
 
   const resetForm = () => {
     setFormData({ name: '', price: '', commissionRate: '', category: '' });
@@ -101,6 +126,8 @@ const ServicesSettings: React.FC = () => {
     const success = await saveService(serviceData);
     if (success) {
       await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
       resetForm();
     }
   };
@@ -109,6 +136,8 @@ const ServicesSettings: React.FC = () => {
     const success = await deleteService(serviceId);
     if (success) {
       await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
     }
     setShowDeleteConfirm(null);
   };
@@ -139,6 +168,8 @@ const ServicesSettings: React.FC = () => {
     const success = await updateServiceCategory(showCategoryEdit, editingCategoryName.trim(), user.id);
     if (success) {
       await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
       setShowCategoryEdit(null);
       setEditingCategoryName('');
     }
@@ -159,6 +190,8 @@ const ServicesSettings: React.FC = () => {
     const success = await deleteServiceCategory(showCategoryDelete, newCategoryForServices, user.id);
     if (success) {
       await loadServices();
+      // Force refresh to ensure we get the latest data
+      setForceRefreshCounter(c => c + 1);
       setShowCategoryDelete(null);
       setNewCategoryForServices('');
     }
