@@ -74,8 +74,7 @@ import {
 import { isSupabaseConfigured } from '../utils/supabaseClient';
 
 // Flag to determine if we should use Supabase or local storage
-// Explicitly check if it's true to avoid any type coercion issues
-const useSupabase = isSupabaseConfigured === true;
+const useSupabase = isSupabaseConfigured;
 
 // Services
 export const getServices = async (userId: string): Promise<Service[]> => {

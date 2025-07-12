@@ -1,17 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-// Get environment variables with fallbacks
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Get environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 console.log('Supabase URL configured:', !!supabaseUrl);
 console.log('Supabase Anon Key configured:', !!supabaseAnonKey);
 
 // Check if environment variables are properly configured
-const isPlaceholder = !supabaseUrl || !supabaseAnonKey || 
-    supabaseUrl === 'your_supabase_project_url_here' || 
-    supabaseAnonKey === 'your_supabase_anon_key_here';
+const isPlaceholder = !supabaseUrl || !supabaseAnonKey;
 
 if (isPlaceholder) {
   console.warn(
