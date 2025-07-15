@@ -7,10 +7,11 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 console.log('Supabase URL configured:', !!supabaseUrl);
 console.log('Supabase Anon Key configured:', !!supabaseAnonKey);
-console.log('isSupabaseConfigured:', !isPlaceholder);
 
 // Check if environment variables are properly configured
 const isPlaceholder = !supabaseUrl || !supabaseAnonKey;
+
+console.log('isSupabaseConfigured:', !isPlaceholder);
 
 if (isPlaceholder) {
   console.warn(
