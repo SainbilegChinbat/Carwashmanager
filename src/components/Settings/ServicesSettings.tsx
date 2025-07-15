@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { mn } from '../../utils/mongolian';
 import { Service } from '../../types';
 import { getServices, saveService, deleteService, updateServiceCategory, deleteServiceCategory, getServiceCategories } from '../../utils/storage';
-import { supabase, isSupabaseConfigured } from '../../utils/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../../utils/supabaseClient'; 
 
 const ServicesSettings: React.FC = () => {
   const { user } = useAuth();
@@ -28,7 +28,7 @@ const ServicesSettings: React.FC = () => {
   // Create a memoized loadServices function that we can use in useEffect and event listeners
   const loadServices = useCallback(async () => {
     if (!user) return;
-    
+    console.log('ServicesSettings: loadServices called. Current user:', user);
     try {
       // Get services
       const userServices = await getServices(user.id);
@@ -87,7 +87,11 @@ const ServicesSettings: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    console.log('ServicesSettings: handleSubmit called. Current user:', user);
+    if (!user) {
+      console.log('ServicesSettings: No user found, returning early');
+      return;
+    }
 
     const serviceData: Service = {
       id: editingService?.id || `${user.id}_service_${Date.now()}`,
@@ -97,8 +101,10 @@ const ServicesSettings: React.FC = () => {
       userId: user.id,
       category: formData.category || 'Ерөнхий'
     };
+    console.log('ServicesSettings: serviceData being sent:', serviceData);
 
     const success = await saveService(serviceData);
+    console.log('ServicesSettings: saveService result:', success);
     if (success) {
       await loadServices();
       resetForm();

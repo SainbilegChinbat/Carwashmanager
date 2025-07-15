@@ -98,6 +98,7 @@ export const getServices = async (userId: string): Promise<Service[]> => {
 
 export const saveService = async (service: Service): Promise<boolean> => {
   try {
+    console.log('supabaseService: saveService called with:', service);
     const serviceData = {
       id: service.id,
       user_id: service.userId,
@@ -113,6 +114,7 @@ export const saveService = async (service: Service): Promise<boolean> => {
       .select('id')
       .eq('id', service.id)
       .maybeSingle();
+    console.log('supabaseService: existingService check result:', existingService);
     
     let result;
     
@@ -128,6 +130,7 @@ export const saveService = async (service: Service): Promise<boolean> => {
         .from('services')
         .insert(serviceData);
     }
+    console.log('supabaseService: result of insert/update:', result);
     
     if (result.error) {
       console.error('Error saving service:', result.error);

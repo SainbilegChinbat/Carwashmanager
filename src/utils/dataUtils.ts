@@ -86,9 +86,13 @@ export const getServices = async (userId: string): Promise<Service[]> => {
 };
 
 export const saveService = async (service: Service): Promise<boolean> => {
+  console.log('dataUtils: saveService called. Using Supabase:', useSupabase);
+  console.log('dataUtils: service object:', service);
   if (useSupabase) {
+    console.log('dataUtils: Calling saveSupabaseService with:', service);
     return await saveSupabaseService(service);
   } else {
+    console.log('dataUtils: Calling saveLocalService with:', service);
     return saveLocalService(service);
   }
 };
@@ -572,6 +576,7 @@ export const getUnpaidCommissions = async (employeeId: string): Promise<Commissi
 // src/utils/dataUtils.ts дотор, getServices функцэд:
 export const getServices = async (userId: string): Promise<Service[]> => {
   console.log("Attempting to get services for userId:", userId);
+  console.log("dataUtils: getServices called. Using Supabase:", useSupabase);
   if (useSupabase) {
     const data = await getSupabaseServices(userId);
     console.log("Supabase services data:", data);
