@@ -117,3 +117,8 @@ useEffect(() => {
   console.log("Current authenticated user:", user);
   setActiveTab('home');
 }, [user?.id]);
+// AppContent дотор:
+useEffect(() => {
+  console.log("Current authenticated user:", user);
+  setActiveTab('home');
+}, [user?.id]);
