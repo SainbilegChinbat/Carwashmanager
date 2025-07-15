@@ -244,7 +244,13 @@ export const checkEmailExists = (email: string): boolean => {
 export const getTransactions = (userId?: string): Transaction[] => {
   try {
     const transactionsStr = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    const transactions: Transaction[] = transactionsStr ? JSON.parse(transactionsStr) : [];
+    let transactions: Transaction[] = transactionsStr ? JSON.parse(transactionsStr) : [];
+    
+    // Convert date strings back to Date objects
+    transactions = transactions.map(transaction => ({
+      ...transaction,
+      date: new Date(transaction.date)
+    }));
     
     // Sort transactions by date in descending order (newest first)
     transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -263,12 +269,19 @@ export const getTransactions = (userId?: string): Transaction[] => {
 export const saveTransaction = (transaction: Transaction): boolean => {
   try {
     const transactions = getTransactions();
-    const existingIndex = transactions.findIndex(t => t.id === transaction.id);
+    
+    // Ensure transaction.date is a Date object
+    const transactionToSave = {
+      ...transaction,
+      date: transaction.date instanceof Date ? transaction.date : new Date(transaction.date)
+    };
+    
+    const existingIndex = transactions.findIndex(t => t.id === transactionToSave.id);
     
     // Ensure commissions have default values for new fields
     const transactionWithDefaults = {
-      ...transaction,
-      commissions: transaction.commissions.map(commission => ({
+      ...transactionToSave,
+      commissions: transactionToSave.commissions.map(commission => ({
         ...commission,
         isPaid: commission.isPaid ?? false,
         notes: commission.notes ?? ''
@@ -722,13 +735,20 @@ export const deletePendingService = (pendingServiceId: string): boolean => {
 export const isLicensePlateAvailableToday = (licensePlate: string, userId: string, excludeId?: string, checkDate?: string): boolean => {
   try {
     // Use provided date or default to today
-    const targetDate = checkDate ? new Date(checkDate).toDateString() : new Date().toDateString();
+    let targetDate;
+    if (checkDate) {
+      // Parse the date string into a Date object
+      const [year, month, day] = checkDate.split('-').map(Number);
+      targetDate = new Date(year, month - 1, day).toDateString();
+    } else {
+      targetDate = new Date().toDateString();
+    }
     
     // Check transactions
     const transactions = getTransactions(userId);
     const targetDateTransactions = transactions.filter(t => 
       t.licensePlate.toLowerCase() === licensePlate.toLowerCase() &&
-      new Date(t.date).toDateString() === targetDate &&
+      t.date.toDateString() === targetDate &&
       t.id !== excludeId
     );
     

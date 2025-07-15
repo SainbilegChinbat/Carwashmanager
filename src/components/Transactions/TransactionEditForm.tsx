@@ -189,6 +189,9 @@ const TransactionEditForm: React.FC<TransactionEditFormProps> = ({ transaction, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !isFormValid()) return;
+    
+    // Preserve the original transaction date but update other fields
+    const originalDate = new Date(transaction.date);
 
     const updatedTransaction: Transaction = {
       ...transaction,
@@ -203,7 +206,8 @@ const TransactionEditForm: React.FC<TransactionEditFormProps> = ({ transaction, 
       paymentMethod: formData.paymentMethod,
       totalAmount: calculateTotal(),
       commissions: calculateCommissions(),
-      notes: formData.notes
+      notes: formData.notes,
+      date: originalDate // Preserve the original transaction date
     };
 
     const success = await saveTransaction(updatedTransaction);

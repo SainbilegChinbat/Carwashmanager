@@ -24,7 +24,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onClose }) => {
     estimatedCompletion: '',
     appointmentDate: '',
     appointmentTime: '',
-    transactionDate: new Date().toISOString().split('T')[0] // Add transaction date field
+    transactionDate: format(new Date(), 'yyyy-MM-dd') // Initialize with today's date in local format
   });
   const [services, setServices] = useState<Service[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -204,9 +204,21 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onClose }) => {
 
     if (formType === 'transaction') {
       // Use the selected transaction date but with current time
-      const transactionDate = new Date(formData.transactionDate);
       const now = new Date();
-      transactionDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      
+      // Parse the date string into year, month, day components
+      const [year, month, day] = formData.transactionDate.split('-').map(Number);
+      
+      // Create a new Date object with local date components and current time
+      const transactionDate = new Date(
+        year,
+        month - 1, // JavaScript months are 0-indexed
+        day,
+        now.getHours(),
+        now.getMinutes(),
+        now.getSeconds(),
+        now.getMilliseconds()
+      );
       
       const transaction: Transaction = {
         id: Date.now().toString(),

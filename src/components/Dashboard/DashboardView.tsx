@@ -56,10 +56,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNewTransaction, refresh
     // Filter today's completed transactions only
     const todayTransactions = transactions.filter(t => {
       const transactionDate = new Date(t.date);
-      // Compare year, month, and day components to determine if it's today
-      return transactionDate.getFullYear() === today.getFullYear() &&
-             transactionDate.getMonth() === today.getMonth() &&
-             transactionDate.getDate() === today.getDate() &&
+      
+      // Get local date components for comparison
+      const transactionYear = transactionDate.getFullYear();
+      const transactionMonth = transactionDate.getMonth();
+      const transactionDay = transactionDate.getDate();
+      
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth();
+      const todayDay = today.getDate();
+      
+      // Compare local date components to determine if it's today
+      return transactionYear === todayYear &&
+             transactionMonth === todayMonth &&
+             transactionDay === todayDay &&
              t.status === 'completed';
     });
 
