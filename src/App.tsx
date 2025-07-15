@@ -112,3 +112,8 @@ function App() {
 }
 
 export default App;
+// AppContent дотор:
+useEffect(() => {
+  console.log("Current authenticated user:", user);
+  setActiveTab('home');
+}, [user?.id]);
