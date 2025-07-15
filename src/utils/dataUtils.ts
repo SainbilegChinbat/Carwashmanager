@@ -78,32 +78,34 @@ const useSupabase = isSupabaseConfigured;
 
 // Services
 export const getServices = async (userId: string): Promise<Service[]> => {
+  console.log("Attempting to get services for userId:", userId);
+  console.log("dataUtils: getServices called. Using Supabase:", useSupabase);
   if (useSupabase) {
-    return await getSupabaseServices(userId);
+    const data = await getSupabaseServices(userId);
+    console.log("Supabase services data:", data);
+    return data;
   } else {
-    return getLocalServices(userId);
+    const data = getLocalServices(userId);
+    console.log("Local services data:", data);
+    return data;
   }
 };
 
 export const saveService = async (service: Service): Promise<boolean> => {
-  console.log('dataUtils: saveService called. Using Supabase:', useSupabase);
-  console.log('dataUtils: saveService called. Initial useSupabase value:', useSupabase);
-  console.log('dataUtils: saveService called. Using Supabase:', useSupabase);
-  console.log('dataUtils: service object:', service);
+  console.log('Attempting to save service. Using Supabase:', useSupabase);
+  console.log('Service object to save:', service);
   if (useSupabase) {
     // Check if we have a valid session before proceeding
     const { data } = await supabase.auth.getSession();
-    console.log('dataUtils: Session data from getSession():', data.session);
-    console.log('dataUtils: Session data from getSession():', data.session);
-    console.log('dataUtils: Session data from getSession():', data.session);
+    console.log('Supabase session data:', data.session);
     if (!data.session) {
-      console.error('dataUtils: No valid session found, cannot save service');
+      console.error('No valid Supabase session found, cannot save service');
       return false;
     }
-    console.log('dataUtils: Calling saveSupabaseService with:', service);
+    console.log('Calling saveSupabaseService with service:', service);
     return await saveSupabaseService(service);
   } else {
-    console.log('dataUtils: Calling saveLocalService with:', service);
+    console.log('Calling saveLocalService with service:', service);
     return saveLocalService(service);
   }
 };

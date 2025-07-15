@@ -45,6 +45,8 @@ export const supabase = createClient<Database>(
 // Export a flag to check if Supabase is properly configured
 export const isSupabaseConfigured = !isPlaceholder;
 
+console.log('Supabase is configured:', isSupabaseConfigured);
+
 // Initialize realtime subscriptions
 export const initializeRealtimeSubscriptions = (userId: string) => {
   if (!isSupabaseConfigured) return null;
