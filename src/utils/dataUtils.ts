@@ -569,3 +569,16 @@ export const getUnpaidCommissions = async (employeeId: string): Promise<Commissi
     return unpaidCommissions;
   }
 };
+// src/utils/dataUtils.ts дотор, getServices функцэд:
+export const getServices = async (userId: string): Promise<Service[]> => {
+  console.log("Attempting to get services for userId:", userId);
+  if (useSupabase) {
+    const data = await getSupabaseServices(userId);
+    console.log("Supabase services data:", data);
+    return data;
+  } else {
+    const data = getLocalServices(userId);
+    console.log("Local services data:", data);
+    return data;
+  }
+};
