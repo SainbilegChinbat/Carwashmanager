@@ -86,12 +86,14 @@ export const getServices = async (userId: string): Promise<Service[]> => {
 };
 
 export const saveService = async (service: Service): Promise<boolean> => {
+  console.log('dataUtils: saveService called. Using Supabase:', useSupabase);
   console.log('dataUtils: saveService called. Initial useSupabase value:', useSupabase);
   console.log('dataUtils: saveService called. Using Supabase:', useSupabase);
   console.log('dataUtils: service object:', service);
   if (useSupabase) {
     // Check if we have a valid session before proceeding
     const { data } = await supabase.auth.getSession();
+    console.log('dataUtils: Session data from getSession():', data.session);
     console.log('dataUtils: Session data from getSession():', data.session);
     console.log('dataUtils: Session data from getSession():', data.session);
     if (!data.session) {
