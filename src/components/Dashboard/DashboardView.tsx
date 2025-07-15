@@ -51,22 +51,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNewTransaction, refresh
     const pendingServices = getPendingServices(user.id);
     const appointments = getAppointments(user.id);
     
-    // Use string-based date comparison to avoid timezone issues
     const today = new Date();
-    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     // Filter today's completed transactions only
     const todayTransactions = transactions.filter(t => {
-      const transactionDateString = new Date(t.date).toISOString().split('T')[0];
-      return transactionDateString === todayString && 
+      const transactionDate = new Date(t.date);
+      // Compare year, month, and day components to determine if it's today
+      return transactionDate.getFullYear() === today.getFullYear() &&
+             transactionDate.getMonth() === today.getMonth() &&
+             transactionDate.getDate() === today.getDate() &&
              t.status === 'completed';
     });
 
     // Count upcoming appointments (not completed or cancelled)
-    today.setHours(0, 0, 0, 0);
     const upcomingAppointments = appointments.filter(a => {
       const appointmentDate = new Date(a.appointmentDate);
-      return appointmentDate >= today && 
+      // Compare dates to see if appointment is today or in the future
+      return (appointmentDate.getTime() >= today.setHours(0, 0, 0, 0)) && 
              a.status !== 'cancelled' && 
              a.status !== 'completed';
     });
@@ -74,12 +75,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNewTransaction, refresh
     // Calculate appointment pending amount - ONLY for today and past unpaid appointments
     const pendingAppointments = appointments.filter(a => {
       const appointmentDate = new Date(a.appointmentDate);
-      appointmentDate.setHours(0, 0, 0, 0);
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0);
       
       // Only include appointments that are:
       // 1. Today or in the past (appointmentDate <= today)
       // 2. Not completed or cancelled
-      return appointmentDate <= today && 
+      return appointmentDate <= todayStart && 
              (a.status === 'scheduled' || a.status === 'confirmed');
     });
     
