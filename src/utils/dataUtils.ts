@@ -89,6 +89,12 @@ export const saveService = async (service: Service): Promise<boolean> => {
   console.log('dataUtils: saveService called. Using Supabase:', useSupabase);
   console.log('dataUtils: service object:', service);
   if (useSupabase) {
+    // Check if we have a valid session before proceeding
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      console.error('dataUtils: No valid session found, cannot save service');
+      return false;
+    }
     console.log('dataUtils: Calling saveSupabaseService with:', service);
     return await saveSupabaseService(service);
   } else {

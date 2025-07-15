@@ -7,6 +7,8 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 console.log('Supabase URL configured:', !!supabaseUrl);
 console.log('Supabase Anon Key configured:', !!supabaseAnonKey);
+console.log('Actual Supabase URL:', supabaseUrl);
+console.log('Actual Supabase Anon Key length:', supabaseAnonKey ? supabaseAnonKey.length : 0);
 
 // Check if environment variables are properly configured
 const isPlaceholder = !supabaseUrl || !supabaseAnonKey;

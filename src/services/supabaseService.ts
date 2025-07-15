@@ -100,7 +100,7 @@ export const saveService = async (service: Service): Promise<boolean> => {
   try {
     console.log('supabaseService: saveService called with:', service);
     const serviceData = {
-      id: service.id,
+      id: service.id || undefined, // Allow Supabase to generate ID if not provided
       user_id: service.userId,
       name: service.name,
       price: service.price,
@@ -134,12 +134,16 @@ export const saveService = async (service: Service): Promise<boolean> => {
     
     if (result.error) {
       console.error('Error saving service:', result.error);
+      console.error('Error details:', result.error.message, result.error.details);
       return false;
     }
     
     return true;
   } catch (error) {
     console.error('Exception saving service:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+    }
     return false;
   }
 };

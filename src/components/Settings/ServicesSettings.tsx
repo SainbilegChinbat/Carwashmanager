@@ -88,8 +88,8 @@ const ServicesSettings: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('ServicesSettings: handleSubmit called. Current user:', user);
-    if (!user) {
-      console.log('ServicesSettings: No user found, returning early');
+    if (!user || !user.id) {
+      console.log('ServicesSettings: No valid user found, returning early');
       return;
     }
 
@@ -108,6 +108,9 @@ const ServicesSettings: React.FC = () => {
     if (success) {
       await loadServices();
       resetForm();
+    } else {
+      console.error('ServicesSettings: Failed to save service');
+      alert('Үйлчилгээг хадгалахад алдаа гарлаа. Дахин оролдоно уу.');
     }
   };
 
