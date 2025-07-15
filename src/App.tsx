@@ -20,6 +20,7 @@ const AppContent: React.FC = () => {
 
   // Reset to home tab when user changes (login/logout)
   useEffect(() => {
+    console.log("Current authenticated user:", user);
     setActiveTab('home');
   }, [user?.id]); // Only trigger when user ID changes
 
@@ -112,13 +113,3 @@ function App() {
 }
 
 export default App;
-// AppContent дотор:
-useEffect(() => {
-  console.log("Current authenticated user:", user);
-  setActiveTab('home');
-}, [user?.id]);
-// AppContent дотор:
-useEffect(() => {
-  console.log("Current authenticated user:", user);
-  setActiveTab('home');
-}, [user?.id]);
